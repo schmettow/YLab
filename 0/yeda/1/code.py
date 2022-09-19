@@ -6,6 +6,7 @@ from analogio import AnalogIn
 from neopixel_write import neopixel_write
 
 DEBUG = True
+tick = 0.01 ## 10 ms
 
 STATE = "Init"
 print(STATE)
@@ -20,8 +21,9 @@ RGB = digitalio.DigitalInOut(rgb_pin)
 RGB.direction = digitalio.Direction.OUTPUT
 
 white = bytearray([10, 10, 10])
-red = bytearray([0, 10, 0])
+red   = bytearray([0, 10, 0])
 green = bytearray([5, 0, 0])
+blue  = bytearray([0, 0, 3])
 
 ## Maker Pi onboard button
 bt1_pin = board.GP20
@@ -42,68 +44,94 @@ def main():
 
     ## Initial state
     STATE = "Stop"
+    this_BT1 = not BT1.value ## default state is closed
     led.value = False
     neopixel_write(RGB, white)
 
     ## Collecting data as list of tuples
     OUT = []
 
-    ## Creating button Events
-    this_bt1 = not BT1.value # getting state of button
-    EventTime = 0
-    EventType = ""
+    ## Creating initial button Events
     print(STATE)
+    
+    ## Preparing event handling
+    ## Mark event on button state change
+    event_time = 0
+    event_type = ""
 
+    
     ## Fast while loop
     while True:
-        time.sleep(0.1)  ## go not so fast
+        ## This is far from perfect, because
+        ##  the ticks also influence the responsiveness of the interface
+        ## Still, analogue sensors update continuously and we have to slow it down just a bit
+        time.sleep(tick)  
         now = time.monotonic()  ## this time
+
+
 
         ############### Collecting button events ########
 
-        ## Asking the current state of the button
-        last_bt1 = this_bt1
-        this_bt1 = not BT1.value
-        ## Mark event on button state change
-        Event = this_bt1 != last_bt1
+        ## Note that buttons are not like switches, as they bounce back.
+        ## What matters is to discover state changes and create higher-level
+        ## events. 
+        ## What matters first is to discover when the button changes its state
+        
+        last_BT1 = this_BT1
+        this_BT1 = not BT1.value # to press means to disrupt the circuit
+        Event = this_BT1 != last_BT1
 
         ################ Creating interaction events ############
+        ## Now the button event is classified further.
+        ## By time stamps we can create more advanced interaction modes
+                
         if Event:
-            ## remembering the last event
-            lastEventTime = EventTime
-            lastEventType = EventType
-            EventTime = now
-
-            if not this_bt1: ## released
-                if (EventTime - lastEventTime) < 2: ## short release
-                    EventType = "BT1_release"
+            ## remembering the last event time
+            last_event_time = event_time
+            event_time = now
+            
+            if not this_BT1: ## released after short or long press
+                if (event_time - last_event_time) < 1: ## short release
+                    event_type = "BT1_short"
                 else:
-                    EventType = "BT1_longrel" ## long release
+                    event_type = "BT1_long" ## long release
             else:
-                EventType = "BT1_pressed"
-            last_bt1 = this_bt1  # and round it goes
+                event_type = "BT1_press"
+            # print(event_type)
 
         ################ Interactive transitionals #############
 
+        
         if Event:
-            if EventType == "BT1_release":
+            if event_type == "BT1_short":
                 ## Stop --> Record
-                if STATE == "Stop" or STATE == "Pause":
+                if STATE == "Record":
+                    STATE = "Pause"
+                    led.value = False
+                    neopixel_write(RGB, green)
+                elif STATE == "Stop" or STATE == "Pause":
                     STATE = "Record"
                     led.value = True
                     neopixel_write(RGB, red)
                 ## Record --> Pause
-                elif STATE == "Record":
-                    STATE = "Pause"
-                    led.value = False
-                    neopixel_write(RGB, green)
-            elif EventType == "BT1_longrel":
+            elif event_type == "BT1_long":
                 STATE = "Stop"
                 led.value = False
                 neopixel_write(RGB, white)
-            elif EventType == "BT1_pressed":
-                pass
-            print(STATE)
+            # print(STATE) if DEBUG
+
+
+
+        ################ Continuous display #############
+
+        if STATE == "Record":
+            pass
+        elif STATE == "Pause":
+            pass
+        elif STATE == "Stop":
+            pass
+        else:
+            pass
 
         ################ Data collection #####################
 
@@ -113,4 +141,6 @@ def main():
             print((this_eda,))  ## best viewed in a serial plotter
 
 main()
+
+
 
