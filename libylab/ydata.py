@@ -9,7 +9,7 @@ from Sensory import this_moment
 class Ydata:
     pins = None
     update_interval = 1
-    
+    filename = None
         
     @classmethod
     def init(cls):
@@ -33,10 +33,12 @@ class Ydata:
         time.sleep(0.05)
         return 42
  
-    def __init__(self, sensor, led = None):
+    def __init__(self, sensor, filename = None, save_interval = None, led = None):
         self.last_saved = None
         self.sensor = sensor
         self.led = led
+        if not filename is None: self.filename = filename
+        if not save_interval is None: self.save_interval = save_interval
  
  
     def update(self):
@@ -58,24 +60,38 @@ class Ydata:
         return True
     
     @classmethod
-    def demo(cls):
+    def demo_0(cls):
         from Sensory import Sensor
         sensor = Sensor()
         sensor.connect()
-        cls.init() # for inheritance
-        drive = cls(sensor) 
-        while True:
-            if sensor.sample():
-                sensor.record()
-            drive.update()
-        cls.final()
-
-
+        if cls.init(): # for inheritance
+            drive = cls(sensor, filename = "demo_0.csv") 
+            while True:
+                if sensor.sample():
+                    print(sensor.buffer())
+                drive.update()
+            cls.final()
+    
+    
+    @classmethod
+    def demo_1(cls):
+        from Sensory import Sensor, Sensory
+        sensory = Sensory([Sensor(), Sensor(sample_interval = 0.1)])
+        sensory.connect()
+        if cls.init(): # for inheritance
+            drive = cls(sensory, filename = "demo_1.csv")
+            while True:
+                if sensory.sample():
+                    print(sensory.buffer())
+                if drive.update():
+                    print("write")
+            cls.final()
 
 class SDcard(Ydata):
     pins = {"cs":board.GP15,
             "spi": board.GP10, "mosi": board.GP11, "miso":board.GP12}
     update_interval = 1
+    filename = "Ylab.csv"
     
     @classmethod
     def init(cls):
@@ -84,28 +100,7 @@ class SDcard(Ydata):
         cls.sd = sdcardio.SDCard(cls.spi, cls.cs)
         cls.vfs = storage.VfsFat(cls.sd)
         return True
-    
-    
-    def connect_(self):
-        self.cs = self.pins["cs"]
-        try:
-            self.spi = busio.SPI(self.pins["spi"], MOSI=self.pins["mosi"], MISO=self.pins["miso"])
-            try:
-                self.sd = sdcardio.SDCard(self.spi, self.cs)
-                try: 
-                    self.vfs = storage.VfsFat(sd)
-                    storage.mount(vfs, '/sd')
-                    return True
-                except:
-                    print("Mounting failed")
-            except:
-                print("SD card not discovered")
-        except:
-            print("SPI failed")
-        return False
-    
- 
-    
+       
     def disconnect_(self):
         try: # this makes sure they all run through
             storage.umount(self.vfs) 
@@ -122,9 +117,10 @@ class SDcard(Ydata):
         return True # <-- quick fix
 
     def write(self):
+        written_rows = 0
         self.mount_point = "/sd"
         storage.mount(SDcard.vfs, self.mount_point)
-        path = self.mount_point + "/ylab.csv"
+        path = self.mount_point + "/" + self.filename
         if self.last_saved is None:
              mode = "w"
              with open(path, mode) as file:
@@ -132,73 +128,14 @@ class SDcard(Ydata):
         else:
              mode = "a"
              data = self.sensor.data
-             n_data = len(data[0])
+             n_data = self.sensor.n_obs()
              with open(path, mode) as file:
                  for row in range(0, n_data):
+                     written_rows += 1
                      file.write(str(data[0][row]) + "," +
                                 str(data[1][row]) +"," +
                                 str(data[2][row]) + "\n")
         storage.umount(self.vfs)
-
-
-    
-#     def write(self):
-#         # result = np.ones(shape = [2,3]) # Sensor.result()
-#         file_name = "ylab.csv"          # Sensor.file_name
-#         path = "/sd/" + file_name
-#         if self.last_saved is None:
-#             mode = "w"
-#             with open(path, mode) as file:
-#                 file.write("time", "," ,"ID", ",", "value" ,"\n")
-#         else:
-#             mode = "a"
-#             with open(path, mode) as file:
-#                 for row in self.sensor.result():
-#                     file.write(str(row[0]), "," ,row[1],"," ,str(row[2]),"\n")
-
-        
-SDcard.demo()
-
-
+        return written_rows
 
     
-        
-    # def reset_data(self):
-    #     self.data = np.empty([0,2])
-
-    # def init_storage():
-    #     cs = board.GP15
-    #     spi = busio.SPI(board.GP10, MOSI=board.GP11, MISO=board.GP12)
-    #     sd = sdcardio.SDCard(spi, cs)
-    #     vfs = storage.VfsFat(sd)
-    #     storage.mount(vfs, '/sd')
-        
-    # def release_storage():
-    #     storage.umount(vfs)
-    #     spi.deinit()
-    #     sd.deinit()
-
-
-    # def save_data(self):
-    #     if self.last_saved is None:
-    #         mode = "w"
-    #     else:
-    #         mode = "a"
-    #     Yhr.init_storage()
-    #     path = os.path.join("/sd", self.filename)
-    #     Yhr.release_storage()
-        
-#         with open(self.filename, mode) as file:
-#             for row in self.data:
-#                 file.write(row[0], "," ,row[1],"\n")
-#        file.close()
-    
-    # def move_data(self):
-    #     now = this_moment()
-    #     if self.last_saved is None: # first time
-    #         self.save()
-    #         self.last_saved = now
-    #     if (now - self.last_saved) >= self.save_interval:
-    #         # self.save()
-    #         self.reset_data()
-
