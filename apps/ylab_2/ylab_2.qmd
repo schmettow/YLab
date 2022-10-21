@@ -1,0 +1,71 @@
+---
+title: "CORY_0: Visualizing multi-sensor data streams"
+author: "M. Schmettow"
+format: html
+editor: visual
+---
+
+```{r}
+library(tidyverse)
+library(readr)
+```
+
+
+## Results
+
+Reading all CSV files in folder /data.
+
+```{r}
+read_ydata <- 
+  function(path,
+           col_types = cols(time = col_double(),
+                            ID = col_character(),
+                            value = col_double())){
+    obs <- 
+      read_csv(path, col_types = col_types) %>% 
+      mutate(Path = path, 
+             Session = str_match(Path, "1666[0-9]*")) %>% 
+      select(Session, time, Sensor = ID, value) %>% 
+      arrange(Session, time, Sensor)
+      
+    
+      
+    return(obs)    
+  }
+
+YD_0 <- read_ydata("data/ylab1_1666376185.csv")
+```
+
+
+
+```{r eval = False}
+files <- dir("data/", full.names = T)
+last_file <- files[length(files)]
+
+YD_0 <- 
+  last_file %>% 
+  map_df(read_ydata) %>% 
+  select(time, ID, value) %>% 
+  arrange(time, ID, value)
+```
+
+Summarizing observations:
+
+```{r}
+YD_0 %>% 
+  group_by(Sensor) %>% 
+  summarize(n = n())
+```
+
+
+
+Plotting a timeline:
+
+```{r}
+YD_0 %>% 
+  ggplot(aes(x = time, 
+             y = value)) +
+  facet_grid(Sensor ~ 1, scales = "free_y") +
+  geom_line()
+```
+
