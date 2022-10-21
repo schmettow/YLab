@@ -1,34 +1,23 @@
 """
-YLab1(Ylab0): YEDA, Yema and Event recorder
+YLab1(Ylab0): YEDA and MOI
 """
 
-print("YLab0 says hi!")
 
 import board
 import time
 
-from sensory import Yeda, Yema_ads, MOI, Sensory
+from sensory import Yeda, MOI, Sensory
 from yui import Button, RGB
 from ydata import SDcard
 
 def main():
     STATE = "Init"
     print(STATE)
-
-    yeda = Yeda()
-    yeda.connect()
-    yema = Yema_ads()
-    yema.connect()
     
-    marker_1 = MOI()
-    marker_1.pins = board.GP21
-    marker_1.connect()
-    marker_2 = MOI()
-    marker_1.pins = board.GP22
-    marker_2.connect()
-    
-    sensory = Sensory([yeda, yema, marker_1, marker_2])
-    #sensory.connect()
+    sensory = Sensory([MOI(pins = board.GP21),
+                       MOI(pins = board.GP22),
+                       Yeda()])
+    sensory.connect()
         
     SDcard.init()
     drive = SDcard(sensory, filename = "ylab1_" + str(time.time()) + ".csv")
@@ -58,7 +47,7 @@ def main():
                         STATE = "Record"
                     ## Stop --> Record
                     elif STATE == "Stop":
-                        yeda.reset_data()
+                        sensory.reset_data()
                         drive.filename = "ylab1_" + str(time.time()) + ".csv"
                         STATE = "Record"
                     ## --> STOP
@@ -71,7 +60,6 @@ def main():
                         break
                     else:
                         STATE = "Stop"
-                        drive.write()
                 
                 ## Updating the static displays ##
                 if STATE == "Record":
@@ -98,7 +86,6 @@ def main():
             pass
         else:
             pass
-
 
 main()
 
