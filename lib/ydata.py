@@ -4,7 +4,9 @@ import time
 import sdcardio
 import storage
 import busio
-from Sensory import this_moment
+
+def this_moment():
+    return time.time()
 
 class Ydata:
     pins = None
