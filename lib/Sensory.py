@@ -10,8 +10,9 @@ class Sensor:
     sample_interval = 1.0/4
     pins = None
 
-    def __init__(self,  pins = None,
-                        sample_interval = None):
+    def __init__(self,  ID = None,
+                 pins = None,
+                 sample_interval = None):
         """
         Creates a new YedaADS sensor object
 
@@ -26,12 +27,14 @@ class Sensor:
         if not sample_interval is None:
             self.sample_interval = sample_interval
         self.sensor_class = self.__class__.__name__
-        self.ID = self.sensor_class + str(Sensor.n_instances) ## auto-counting multiple devices
+        self.ID = self.sensor_class + str(self.__class__.n_instances)
+        
+        
         self.time = this_moment()
         self.value = float()
         self.reset_data()
         self.last_saved = None
-        Sensor.n_instances = Sensor.n_instances + 1        ## auto-counting multiple Sensor devices
+        self.__class__.n_instances += 1      ## auto-counting multiple Sensors
     
     def connect(self):
         try:
@@ -84,6 +87,11 @@ class Sensor:
             out = [[self.time], [self.ID], [self.value]]
         return out
 
+    def reset_data(self):
+        self.data = [[], [], []]
+        return True
+
+
     def buffer(self):
         result = self.result()
         n_result = len(result[0])
@@ -91,6 +99,7 @@ class Sensor:
             self.data[col].append(result[col][0])  ## <<- bad fix
         return n_result
     
+
     def record(self):
         return self.buffer()
    
@@ -105,25 +114,90 @@ class Sensor:
         print(out)
 
     @classmethod
-    def demo(cls):
+    def demo_0(cls):
         sensor = cls()
         sensor.connect()
-        sensor.sample_interval = 0.2
+        sensor.sample_interval = 0.1
         while True:
             if sensor.sample():
                 sensor.print()
-                print(sensor.result())
                 
-    def reset_data(self):
-        self.data = [[], [], []]
-        return True
+    @classmethod
+    def demo_1(cls):
+        from ydata import SDcard
+        """
+        Demonstration of storage
+        """
+        sensor = cls()
+        sensor.connect()
+        sensor.sample_interval = 0.1
+        
+        SDcard.init()
+        drive = SDcard(sensor, "sensor_demo_1.csv")
+        drive.connect()
+        
+        while True:
+            if sensor.sample():
+                sensor.print()
+                sensor.buffer()
+                print(sensor.result())
+            drive.update()
+
+
+class MOI(Sensor):
+    """
+    Basic moments-of-interest sampler
+    
+    The MOI sampler has a modified sample() method,
+    which only fires, if a defined event has been detected.
+    Defaults to button GP22
+    """
+    sample_interval = 0.01
+    pins = board.GP22
+    on_on = True
+    event = 0
+    last_state = state = None
+    
+    
+    def sample(self, interval = None):
+        """
+        Updates the sensor readings only if the value has changed
+        """
+        if interval is not None:
+            self.sample_interval = interval
+        
+        now = this_moment()
+        if (now - self.time) >= self.sample_interval:
+            self.last_state = self.state
+            self.state = self.read()
+            self.time = now
+            if self.state != self.last_state:
+                return self.update_value()
+        return False
+
+    def connect(self):
+        import yui
+        return yui.Onoff.connect(self)
+    
+    def read(self):
+        return not self.sensor.value
+
+    def update_value(self):
+        if self.state and self.on_on:
+            self.value = 1
+            return True
+        elif not self.state and not self.on_on:
+            self.value = 0
+            return True
+        return False
 
 
 
+# MOI.demo_1()
 
 class Sensory(Sensor):
     """
-    A sensor array   
+    A sensor array
     """
 
     def __init__(self, sensor_array):
@@ -239,6 +313,25 @@ class Sensor_ads(Sensor_analog):
         chan = [ADS.P0, ADS.P1, ADS.P2, ADS.P3][pin]
         self.sensor = AnalogIn(Sensor_ads.ads, chan)
         return Sensor.connect(self) ## base class, performs first read
+
+class Sensor_binary(Sensor):
+    pins = board.GP22  ## default button GP22 (corner)
+    bit_width = 1
+    inverted = True
+    
+    def connect(self):
+        import digitalio
+        """
+        Connects to the sensor port
+        """
+        self.sensor = digitalio.DigitalIn(self.pins)
+        self.sensor.switch_to_input(pull=digitalio.Pull.DOWN)
+        return Sensor.connect(self)
+
+    def read(self):
+        value = self.sensor.value
+        if self.inverted: value = not bool(value)
+        return value
 
 
 class Yeda(Sensor_analog):
