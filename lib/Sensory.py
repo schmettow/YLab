@@ -161,7 +161,7 @@ class MOI(Sensor):
     
     def sample(self, interval = None):
         """
-        Updates the sensor readings only if the value has changed
+        Updates only if the state has changed
         """
         if interval is not None:
             self.sample_interval = interval
@@ -172,17 +172,21 @@ class MOI(Sensor):
             self.state = self.read()
             self.time = now
             if self.state != self.last_state:
-                return self.update_value()
+                return self.get_event()
         return False
 
     def connect(self):
         import yui
-        return yui.Onoff.connect(self)
+        if yui.Onoff.connect(self):
+            self.value = 0
+            return True
+        return False
+        
     
     def read(self):
         return not self.sensor.value
 
-    def update_value(self):
+    def get_event(self):
         if self.state and self.on_on:
             self.value = 1
             return True
@@ -211,7 +215,7 @@ class Sensory(Sensor):
         success = True
         for sensor in self.sensors:
             if not sensor.connect():
-                success = false
+                success = False
         return success
         
     def sample(self):
