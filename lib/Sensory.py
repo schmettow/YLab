@@ -184,7 +184,7 @@ class Sensor_analog(Sensor):
         else:
             value = 2**self.bit_width
         if self.reciprocal: value = 1/value
-            return 1/value
+        return 1/value
 
 
 

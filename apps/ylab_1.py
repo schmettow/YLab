@@ -6,8 +6,8 @@ YLab1(Ylab0): YEDA and Yema recorder
 import board
 import time
 
-from Sensory import Yeda, Yema_ads, Sensory
-from YUI import Button, RGB
+from sensory import Yeda, Yema_ads, Sensory
+from yui import Button, RGB
 from ydata import SDcard
 
 print("YLab0 says hi!")
