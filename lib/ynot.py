@@ -2,16 +2,8 @@ import board
 import os
 import time
 import digitalio
-from libylab import this_moment
-from libyhr import Yhr
+from sensory import this_moment, Sensor
 
-
-class MockSensor:
-    def __init__(self):
-        self.value = self.read()
-        
-    def read(self):
-        return int(this_moment()) % 4
 
 class YnotSend:
     
@@ -59,7 +51,7 @@ class YnotSend:
 
 def main():
     Sender = YnotSend(pin = board.LED, time_unit = 0.5, pulse_width = 0.1)
-    Sensor = Yhr()
+    Sensor = Sensor()
     Sender.connect(Sensor)
     while True:
         time.sleep(0.01)
