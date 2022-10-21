@@ -1,12 +1,12 @@
 """
-YLab0: YEDA recorder
+YLab1(Ylab0): YEDA and Yema recorder
 """
 
 
 import board
 import time
 
-from Sensory import Yeda
+from Sensory import Yeda, Yema_ads, Sensory
 from YUI import Button, RGB
 from ydata import SDcard
 
@@ -17,9 +17,13 @@ def main():
 
     yeda = Yeda()
     yeda.connect()
-
+    yema = Yema_ads()
+    yema.connect()
+    
+    sensory = Sensory([yeda, yema])
+        
     SDcard.init()
-    drive = SDcard(yeda, filename = "ylab0_" + str(time.time()) + ".csv")
+    drive = SDcard(sensory, filename = "ylab0_" + str(time.time()) + ".csv")
     drive.connect()
     
     btn = Button()
@@ -73,13 +77,13 @@ def main():
         ################ Continuous processing #############
 
         if STATE == "Record":
-            if yeda.sample():
-                yeda.print()
-                yeda.record()
+            if sensory.sample():
+                sensory.print()
+                sensory.record()
             drive.update()
         elif STATE == "Pause":
-            if yeda.sample():
-                yeda.print()
+            if sensory.sample():
+                sensory.print()
         elif STATE == "Stop":
             pass
         else:
