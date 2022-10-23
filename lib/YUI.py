@@ -42,16 +42,11 @@ class LED(Output):
     def off(self):
         self.write(False)
         
-    def toggle(self):
+    def Onoff(self):
         self.led.value = not self.led.value
 
 class RGB(Output):
     pins = board.GP28
-    white = bytearray([10, 10, 10])
-    red   = bytearray([0, 10, 0])
-    green = bytearray([5, 0, 0])
-    blue  = bytearray([0, 0, 3])
-    black  = bytearray([0, 0, 0])
     
     def __init__(self, pins = None):
         if not pins is None:
@@ -64,20 +59,23 @@ class RGB(Output):
     def write(self, color):
         neopixel_write(self.led, color)
         
-    def red(self):
-        self.write(bytearray([0, 10, 0]))
+    def red(self):    self.write(bytearray([0, 10, 0]))
     
-    def green(self):
-        self.write(bytearray([5, 0, 0]))
+    def dred(self):   self.write(bytearray([0, 3, 0]))
     
-    def blue(self):
-        self.write(bytearray([0, 0, 3]))
+    def yellow(self): self.write(bytearray([8, 8, 0]))
     
-    def white(self):
-        self.write(bytearray([10, 10, 10]))
-        
-    def off(self):
-        self.write(bytearray([0, 0, 0]))
+    def orange(self): self.write(bytearray([5, 10, 0]))
+    
+    def green(self):  self.write(bytearray([5, 0, 0]))
+    
+    def blue(self):   self.write(bytearray([0, 0, 3]))
+    
+    def white(self):  self.write(bytearray([10, 10, 10]))
+    
+    def on(self):     self.white()
+    
+    def off(self):    self.write(bytearray([0, 0, 0]))
 
 
 class Input:
@@ -123,7 +121,9 @@ class Input:
             if In.update():
                 print(In.value)
 
-class Onoff(Input):
+
+
+class Buzzer(Input):
     pins = board.GP20
     
     def connect(self):
@@ -135,18 +135,15 @@ class Onoff(Input):
         return not self.sensor.value
     
     def demo():
-        Ono = Onoff()
-        if Ono.connect():
+        buzz = Buzzer()
+        if buzz.connect():
             while True:
-                if Ono.update():
-                    print(Ono.value)
-            
+                if buzz.update():
+                    print(buzz.value)
 
-
-class Toggle(Onoff):
-    
+class Onoff(Buzzer):
     def connect(self):
-        if Onoff.connect(self):    
+        if Buzzer.connect(self):    
             self.state = False # <---
             return True
         else:
@@ -154,12 +151,12 @@ class Toggle(Onoff):
   
     def update_state(self):
         if self.value: # on press
-            self.state = not self.state # toggle
+            self.state = not self.state # Onoff
             return True
         return False
     
     def demo():
-        Tgl = Toggle()
+        Tgl = Onoff()
         if Tgl.connect():
             while True:
                 if Tgl.update():
@@ -169,11 +166,11 @@ class Toggle(Onoff):
 
         
 
-class Button(Onoff):
+class Shortlong(Buzzer):
     long_press = 1.0
 
     def connect(self):
-        if Onoff.connect(self):    
+        if Buzzer.connect(self):    
             self.event  = None
             return True
         else:
@@ -211,3 +208,4 @@ class Button(Onoff):
                         STATE = "Stop"
                     print(Btn.event + " --> " + STATE)
 
+Button = Shortlong
