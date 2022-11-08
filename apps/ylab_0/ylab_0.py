@@ -22,7 +22,7 @@ def main():
     drive = SDcard(yeda, filename = "ylab0_" + str(time.time()) + ".csv")
     drive.connect()
     
-    btn = Button()
+    btn = Shortlong()
     btn.connect()
     
     rgb = RGB()
@@ -58,6 +58,7 @@ def main():
                     else:
                         STATE = "Stop"
                         drive.write()
+                        break
                 
                 ## Updating the static displays ##
                 if STATE == "Record":
@@ -75,7 +76,7 @@ def main():
         if STATE == "Record":
             if yeda.sample():
                 yeda.print()
-                yeda.record()
+                yeda.buffer()
             drive.update()
         elif STATE == "Pause":
             if yeda.sample():

@@ -79,6 +79,14 @@ class RGB(Output):
 
 
 class Input:
+    """
+    Generic input objects
+    
+    Observes an input source in a given sampling frequency 
+    and announces an update when the value changes.
+    """
+
+
     pins = {"yellow": 0,
             "white":  1}
     sample_interval = 0.05
@@ -106,7 +114,7 @@ class Input:
         time_passed = now - self.time
         if time_passed > self.sample_interval:
             new_value = self.read()
-            if new_value != self.value: # <---
+            if new_value != self.value: # <--- every state change
                 self.last_value = self.value
                 self.value = new_value
                 self.last_time = self.time
@@ -124,6 +132,13 @@ class Input:
 
 
 class Buzzer(Input):
+    """
+    Observes a digital pin or button
+    
+    Connects to a digital pin, which is closed by 
+    default (such as the Maker Pi buttons). Inherits update 
+    announcement by evbery state change.
+    """
     pins = board.GP20
     
     def connect(self):
@@ -141,43 +156,34 @@ class Buzzer(Input):
                 if buzz.update():
                     print(buzz.value)
 
-class Onoff(Buzzer):
-    def connect(self):
-        if Buzzer.connect(self):    
-            self.state = False # <---
+
+class ButtonPress(Buzzer):
+    """
+    Observes a button for button presses
+
+    This class implements an event announcement mechanism,
+    which fires only on when the button closes.
+    """
+    def update_event(self):
+        if self.value: # on press
+            self.event = 1
             return True
         else:
-            return False
-  
-    def update_state(self):
-        if self.value: # on press
-            self.state = not self.state # Onoff
-            return True
-        return False
-    
-    def demo():
-        Tgl = Onoff()
-        if Tgl.connect():
-            while True:
-                if Tgl.update():
-                    if Tgl.update_state():
-                        print(Tgl.state)
+            self.event = 0 # event gets a reset only
+            return False   # no downstream operations will be triggered
 
 
-        
 
 class Shortlong(Buzzer):
+    """
+    Observes a button for varying length button presses
+
+    This class implements an update event mechanism, where 
+    events are classified as short or long button releases.
+    """
     long_press = 1.0
+    event  = None
 
-    def connect(self):
-        if Buzzer.connect(self):    
-            self.event  = None
-            return True
-        else:
-            return False
-
-    
-    
     def update_event(self):
         if not self.value: # on release
             if (self.time - self.last_time) < self.long_press:
@@ -209,3 +215,27 @@ class Shortlong(Buzzer):
                     print(Btn.event + " --> " + STATE)
 
 Button = Shortlong
+
+
+class Onoff(Buzzer):
+    def connect(self):
+        if Buzzer.connect(self):    
+            self.state = False # <---
+            return True
+        else:
+            return False
+  
+    def update_state(self):
+        if self.value: # on press
+            self.state = not self.state # Onoff
+            return True
+        return False
+    
+    def demo():
+        Tgl = Onoff()
+        if Tgl.connect():
+            while True:
+                if Tgl.update():
+                    if Tgl.update_state():
+                        print(Tgl.state)
+

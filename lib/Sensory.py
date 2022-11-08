@@ -344,8 +344,11 @@ class Yeda(Sensor_analog):
 
 class Yema(Sensor_analog):
     pins = board.GP27
+    sample_interval = 1.0/100
     reciprocal = False
     
 class Yema_ads(Sensor_ads):
     sample_interval = 1.0/100
     reciprocal = False
+
+print("Sensory")
