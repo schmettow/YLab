@@ -10,18 +10,21 @@ class Sensor:
     sample_interval = 1.0/4
     pins = None
 
-    def __init__(self,  ID = None,
+    def __init__(self,
+                 ID = None,
                  pins = None,
-                 sample_interval = None):
+                 sample_interval = None,
+                 channel = 0):
         """
-        Creates a new YedaADS sensor object
+        Creates a new sensor object
 
-        :param eda_pin: IO port YedaADS is connected to, default is Grove slot 
+        :param pins: IO port
         :param sample_interval float: time between measures
         :return: None
         :rtype: NoneType
 
         """
+        self.channel = channel
         if not pins is None:
             self.pins = pins
         if not sample_interval is None:
@@ -265,58 +268,70 @@ class Sensor_analog(Sensor):
         return 1/value
 
 
-
-class Sensor_ads(Sensor_analog):
+class ADS():
     pins = {"SCL": board.GP7,
             "SDA": board.GP6}
     bit_width = 15
     i2c = None
     ads = None
+    init = False
+    data_rate = 860
+    mode = 0
+    # channels = [ADS.P0, ADS.P1, ADS.P2, ADS.P3]
     
-    ## These are not class methods
-    ## if they were, every class would create their own busio
-    ## busio is considered a singleton
-    ## Defaults to Grove port 4
+    def __init__(self, gain = 1):
+        self.gain = gain
+        self.init_i2c()
+        print("Init I2C")
+        self.init_ads()
+        print("Init ADS")
+        self.init = True
     
-    def init_i2c():
+    def init_i2c(self):
         import busio
-        Sensor_ads.i2c = busio.I2C(Sensor_ads.pins["SCL"], 
-                                  Sensor_ads.pins["SDA"])
+        self.i2c = busio.I2C(self.pins["SCL"], 
+                             self.pins["SDA"])
         return True
     
-    def init_ads():
-        import adafruit_ads1x15.ads1115 as ADS
-        from adafruit_ads1x15.analog_in import AnalogIn
-        Sensor_ads.ads = ADS.ADS1115(Sensor_ads.i2c)
+    def init_ads(self):
+        import adafruit_ads1x15.ads1115 as ads
+        self.ads = ads.ADS1115(self.i2c,
+                               data_rate = self.data_rate, # max
+                               mode = self.mode,
+                               gain = self.gain) # cont
         return True
     
-    def connect(self, pin = 0):
+
+class Sensor_ads(Sensor_analog):
+    def __init__(self,
+                 ads,
+                 channel = 0,
+                 ID = None,
+                 pins = None,
+                 sample_interval = None):
+        self.ads = ads
+        self.channel = channel
+        Sensor.__init__(self,
+                        ID = ID,
+                        pins = pins,
+                        sample_interval = sample_interval)
+        
+    
+    def connect(self):
         """
         Connects to an ADS1115 analog pin
-        
-        For the moment only works on pin 0
         
         :return: success  or fail
         :rtype: Boolean
         """
         
-        ## busio belongs to the base class which makes it singleton
-        if Sensor_ads.i2c is None:
-            import busio
-            Sensor_ads.i2c = busio.I2C(Sensor_ads.pins["SCL"], 
-                                       Sensor_ads.pins["SDA"])
-            print("Init I2C")
-        
-        ## ADS is singleton
-        if Sensor_ads.ads is None:
-            import adafruit_ads1x15.ads1115 as ADS
+        if self.ads.init:
             from adafruit_ads1x15.analog_in import AnalogIn
-            Sensor_ads.ads = ADS.ADS1115(Sensor_ads.i2c)
-            print("Init ADS")
-        
-        chan = [ADS.P0, ADS.P1, ADS.P2, ADS.P3][pin]
-        self.sensor = AnalogIn(Sensor_ads.ads, chan)
-        return Sensor.connect(self) ## base class, performs first read
+            ads = self.ads.ads
+            #chan = self.ads.P0 #[ADS.P0, ADS.P1, ADS.P2, ADS.P3][self.channel]
+            self.sensor = AnalogIn(ads, self.channel)
+            return Sensor.connect(self) ## base class, performs first read
+        return False
 
 class Sensor_binary(Sensor):
     pins = board.GP22  ## default button GP22 (corner)

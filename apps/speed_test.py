@@ -2,40 +2,38 @@
 testing the speed of reading a sensor
 """
 
-from sensory import Yeda, this_moment
-
-measures = []
-hz = 1000
-buffer = int(hz)
-
-def reset_measures():
-    global measures
-    measures = []
+from sensory import *
     
 def main():
     State = "Init"
     print(State)
-
-    sensor = Yeda(sample_interval = 1/hz)
-    sensor.connect()
     
-    reset_measures()
+    ads = ADS()
+    sensory = Sensory([Sensor_ads(ads, 0, sample_interval = 0),
+                       Sensor_ads(ads, 1, sample_interval = 0),
+                       Sensor_ads(ads, 2, sample_interval = 0),
+                       Sensor_ads(ads, 3, sample_interval = 0),
+                       Sensor_analog(sample_interval = 0)])
+    sensory.connect()
+    
+    n_measures = 0
+    now = last = this_moment()
+    time_since = 0
     
     State = "Measure"
     print(State)
     
-    now = this_moment()
-    
     while True:
-        if sensor.sample():
+        if sensory.sample():
+            n_measures = n_measures + 1
+        now = this_moment()
+        time_since = now - last
+        if  time_since >= 1:
+            hz = n_measures/time_since
+            print("hz:", int(hz))
+            n_measures = 0
             last = now
-            now = this_moment()
-            if len(measures) == 0 or not len(measures) % hz == 0:
-                measures.append(now - last)
-            else:
-                avg = sum(measures)/len(measures)
-                print("hz_avg:", int(1/avg))
-                reset_measures()
+            sensory.reset_data()
 main()
 
 ## Assignment: Also print min and max.

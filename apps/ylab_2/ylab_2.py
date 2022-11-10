@@ -6,7 +6,7 @@ YLab1(Ylab0): YEDA and MOI
 import board
 import time
 
-from sensory import Yeda, Yema_ads, MOI, Sensory
+from sensory import Sensor_analog, Sensor_ads, MOI, Sensory, ADS
 from yui import Button, RGB
 from ydata import SDcard
 
@@ -14,10 +14,12 @@ def main():
     STATE = "Init"
     print(STATE)
     
+    ads = ADS(gain = 8)
+    
     sensory = Sensory([MOI(pins = board.GP21),
                        MOI(pins = board.GP22),
-                       Yeda(),
-                       Yema_ads()])
+                       Sensor_analog(sample_interval = 1/100), # yema
+                       Sensor_ads(ads, 0, sample_interval = 1/20)])
     sensory.connect()
         
     SDcard.init()
