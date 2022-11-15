@@ -1,7 +1,6 @@
 import board
 import time
 import busio
-from ulab import numpy as np
 
 def this_moment():
     return time.monotonic()
