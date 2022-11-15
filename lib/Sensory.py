@@ -1,5 +1,6 @@
 import board
 import time
+import busio
 from ulab import numpy as np
 
 def this_moment():
@@ -9,7 +10,7 @@ class Sensor:
     n_instances = int(0)
     sample_interval = 1.0/4
     pins = None
-
+    
     def __init__(self,
                  ID = None,
                  pins = None,
@@ -93,6 +94,9 @@ class Sensor:
     def reset_data(self):
         self.data = [[], [], []]
         return True
+    
+    def clear_buffer(self):
+        return self.reset_data()
 
 
     def buffer(self):
@@ -147,60 +151,6 @@ class Sensor:
             drive.update()
 
 
-class MOI(Sensor):
-    """
-    Basic moments-of-interest sampler
-    
-    The MOI sampler has a modified sample() method,
-    which only fires, if a defined event has been detected.
-    Defaults to button GP22
-    """
-    sample_interval = 0.01
-    pins = board.GP22
-    on_on = True
-    event = 0
-    last_state = state = None
-    
-    
-    def sample(self, interval = None):
-        """
-        Updates only if the state has changed
-        """
-        if interval is not None:
-            self.sample_interval = interval
-        
-        now = this_moment()
-        if (now - self.time) >= self.sample_interval:
-            self.last_state = self.state
-            self.state = self.read()
-            self.time = now
-            if self.state != self.last_state:
-                return self.get_event()
-        return False
-
-    def connect(self):
-        import yui
-        if yui.Onoff.connect(self):
-            self.value = 0
-            return True
-        return False
-        
-    
-    def read(self):
-        return not self.sensor.value
-
-    def get_event(self):
-        if self.state and self.on_on:
-            self.value = 1
-            return True
-        elif not self.state and not self.on_on:
-            self.value = 0
-            return True
-        return False
-
-
-
-# MOI.demo_1()
 
 class Sensory(Sensor):
     """
@@ -288,7 +238,6 @@ class ADS():
         self.init = True
     
     def init_i2c(self):
-        import busio
         self.i2c = busio.I2C(self.pins["SCL"], 
                              self.pins["SDA"])
         return True
@@ -333,6 +282,62 @@ class Sensor_ads(Sensor_analog):
             return Sensor.connect(self) ## base class, performs first read
         return False
 
+
+class Yxz_3D(Sensor):
+    pins = {"SCL": board.GP7,
+            "SDA": board.GP6}
+    i2c_addr = 0x19
+    import adafruit_lis3dh as HAL ## hardware abstraction layer
+    
+    def connect(self):
+        """
+        Connects to an LIS3DH
+        
+        :return: success  or fail
+        :rtype: Boolean
+        """
+
+        self.i2c = busio.I2C(board.GP7, board.GP6)
+        self.sensor = self.HAL.LIS3DH_I2C(self.i2c,
+                                        address = self.i2c_addr)
+        self.sensor.range = self.HAL.RANGE_2_G
+        return Sensor.connect(self) ## base class, performs first read
+
+    def read(self):
+        accel = [value / self.HAL.STANDARD_GRAVITY for value in self.sensor.acceleration]
+        return accel
+    
+    def sample(self, interval = None):
+        """
+        Updates the sensor readings in regular intervals
+        
+        For this it needs to be in a fast while loop
+        
+        :param interval float: overrides update interval of object
+        :param frequency float: overrides interval as reads/s
+        :return: tuple (update, value), with the last value if no update has occured.
+        """
+
+        ## Catching the method arguments
+        if interval is not None:
+            self.sample_interval = interval
+        
+        now = this_moment()
+        if (now - self.time) >= self.sample_interval:
+            self.time = now
+            self.value = self.read()
+            return True
+        else:
+            return False
+
+    def result(self):
+        return [[self.time, self.time, self.time],
+                [self.ID + axis for axis in ("x","y","z")],
+                self.value]
+
+
+
+
 class Sensor_binary(Sensor):
     pins = board.GP22  ## default button GP22 (corner)
     bit_width = 1
@@ -351,6 +356,64 @@ class Sensor_binary(Sensor):
         value = self.sensor.value
         if self.inverted: value = not bool(value)
         return value
+
+
+
+class MOI(Sensor):
+    """
+    Basic moments-of-interest sampler
+    
+    The MOI sampler has a modified sample() method,
+    which only fires, if a defined event has been detected.
+    Defaults to button GP22
+    """
+    sample_interval = 0.01
+    pins = board.GP22
+    on_on = True
+    event = 0
+    last_state = state = None
+    
+    
+    def sample(self, interval = None):
+        """
+        Updates only if the state has changed
+        """
+        if interval is not None:
+            self.sample_interval = interval
+        
+        now = this_moment()
+        if (now - self.time) >= self.sample_interval:
+            self.last_state = self.state
+            self.state = self.read()
+            self.time = now
+            if self.state != self.last_state:
+                return self.get_event()
+        return False
+
+    def connect(self):
+        import yui
+        if yui.Onoff.connect(self):
+            self.value = 0
+            return True
+        return False
+        
+    
+    def read(self):
+        return not self.sensor.value
+
+    def get_event(self):
+        if self.state and self.on_on:
+            self.value = 1
+            return True
+        elif not self.state and not self.on_on:
+            self.value = 0
+            return True
+        return False
+
+
+
+# MOI.demo_1()
+
 
 
 class Yeda(Sensor_analog):

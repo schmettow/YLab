@@ -76,7 +76,7 @@ When the program starts, it is in Stop mode (White). Clicking button GP20 enters
 
 Clicking the button again activates Record mode (Red), where the sampled data is collected and regularly transferred from the sensor to a file on the SD card. You should see the leds GP10 - GP13 flicker every second
 
-From here on Button 20 toggles between Record and pause mode. A long press on the button enters Stop mode (White).
+From here on Shortlong 20 toggles between Record and pause mode. A long press on the button enters Stop mode (White).
 In Stop mode a long press ends YLab0
 
 The results of recordings are stored as a file ylab_seconds.csv on the SDcard. To use it, remove the SDcard and put it into a slot on your computer (you may need a microSD adaptor). The CSV files can be opened with any data analysis system.

@@ -7,7 +7,7 @@ import board
 import time
 
 from sensory import Yeda, MOI, Sensory
-from yui import Button, RGB
+from yui import Shortlong, RGB
 from ydata import SDcard
 
 def main():
@@ -23,7 +23,7 @@ def main():
     drive = SDcard(sensory, filename = "ylab1_" + str(time.time()) + ".csv")
     drive.connect()
     
-    btn = Button()
+    btn = Shortlong()
     btn.connect()
     
     rgb = RGB()

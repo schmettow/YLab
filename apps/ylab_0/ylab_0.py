@@ -7,7 +7,7 @@ import board
 import time
 
 from sensory import Yeda
-from yui import Button, RGB
+from yui import Shortlong, RGB
 from ydata import SDcard
 
 print("YLab0 says hi!")

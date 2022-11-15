@@ -18,7 +18,7 @@ To run YLab0:
 1. When the program starts, it is in Stop mode (White).
 1. Clicking button GP20 enters Pause mode (Green), where the program samples the sensor and print results it to the screen. You should see numbers printed to teh console and a moving graph in Plotter
 1. Clicking the button again activates Record mode (Red), where the sampled data is collected and regularly transferred from the sensor to a file on the SD card. You should see the leds GP10 - GP13 flicker every second
-1. Button 20 toggles between Record and pause mode
+1. Shortlong 20 toggles between Record and pause mode
 1. A long press on the button enters Stop mode (White).
 1. In Stop mode a long press ends YLab0
 
