@@ -6,6 +6,9 @@ def this_moment():
     return time.monotonic()
 
 class Sensor:
+    """
+    provides a unified interface for sampling from sensors
+    """
     n_instances = int(0)
     sample_interval = 1.0/4
     pins = None
@@ -76,9 +79,7 @@ class Sensor:
 
     def result(self):
         """
-        Presents the current reading
-        
-        ... in YLab standard, which is time, ID, value
+        Presents the current reading as YLab standard measure (time, ID, value)
 
         :return: (time, ID, value)
         :rtype: tuple
@@ -90,25 +91,30 @@ class Sensor:
             out = [[self.time], [self.ID], [self.value]]
         return out
 
-    def reset_data(self):
+    def clear_buffer(self):
+        """
+        resets the sensor buffer
+        """
         self.data = [[], [], []]
         return True
-    
-    def clear_buffer(self):
-        return self.reset_data()
-
 
     def buffer(self):
+        """
+        adds a measurement to the sensor buffer
+        """
         result = self.result()
         n_result = len(result[0])
         for col in range(0, len(result)):
             self.data[col].append(result[col][0])  ## <<- bad fix
         return n_result
     
-
+    ## just for backward compatibility
+    def reset_data(self):        
+        return self.clear_buffer()
+    
     def record(self):
         return self.buffer()
-   
+    
     def data_dim(self):
         return (len(self.data[0]), len(self.data))
    
@@ -116,11 +122,17 @@ class Sensor:
         return len(self.data[0])
     
     def print(self):
+        """
+        Print the present measure for use with Thonny plotter
+        """
         out = self.ID +":"+ str(self.value)
         print(out)
 
     @classmethod
     def demo_0(cls):
+        """
+        Basic demo showing sampling and printing
+        """
         sensor = cls()
         sensor.connect()
         sensor.sample_interval = 0.1
@@ -132,7 +144,7 @@ class Sensor:
     def demo_1(cls):
         from ydata import SDcard
         """
-        Demonstration of storage
+        Demo of storage (SD card required)
         """
         sensor = cls()
         sensor.connect()
@@ -153,7 +165,9 @@ class Sensor:
 
 class Sensory(Sensor):
     """
-    A sensor array
+    Unifying multiple sensors in a sensor array
+
+    :param list of sensor objects
     """
 
     def __init__(self, sensor_array):
@@ -164,6 +178,9 @@ class Sensory(Sensor):
         self.data = [[],[],[]]
     
     def connect(self):
+        """
+        connect all sensors in the array
+        """
         success = True
         for sensor in self.sensors:
             if not sensor.connect():
@@ -171,6 +188,9 @@ class Sensory(Sensor):
         return success
         
     def sample(self):
+        """
+        sample all sensors in the array
+        """
         self.ID = []
         self.time = []
         self.value = []
@@ -185,6 +205,9 @@ class Sensory(Sensor):
     
          
     def print(self):
+        """
+        print readings from all sensors in the array
+        """
         out_string = ""
         for sensor in self.sensors:
             out_string = out_string + sensor.ID + ":" + str(sensor.value) + " "
@@ -201,9 +224,6 @@ class Sensor_analog(Sensor):
     
     def connect(self):
         import analogio
-        """
-        Connects to the sensor port
-        """
         self.sensor = analogio.AnalogIn(self.pins)
         return Sensor.connect(self)
 
@@ -286,15 +306,15 @@ class Yxz_3D(Sensor):
     pins = {"SCL": board.GP7,
             "SDA": board.GP6}
     i2c_addr = 0x19
-    import adafruit_lis3dh as HAL ## hardware abstraction layer
     
     def connect(self):
         """
-        Connects to an LIS3DH
+        Connects to an LIS3DH 3 DoF sensor
         
         :return: success  or fail
         :rtype: Boolean
         """
+        import adafruit_lis3dh as HAL ## hardware abstraction layer
 
         self.i2c = busio.I2C(board.GP7, board.GP6)
         self.sensor = self.HAL.LIS3DH_I2C(self.i2c,
