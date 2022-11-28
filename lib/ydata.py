@@ -10,7 +10,7 @@ def this_moment():
 
 class Ydata:
     pins = None
-    update_interval = 1
+    save_interval = 1
     filename = None
         
     @classmethod
@@ -49,7 +49,7 @@ class Ydata:
         """
         now = this_moment()
         first_save = self.last_saved is None
-        if first_save or (now - self.last_saved) >= self.update_interval:
+        if first_save or (now - self.last_saved) >= self.save_interval:
             if self.connect():
                 self.move()
                 self.last_saved = now
