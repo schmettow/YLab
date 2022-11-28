@@ -15,15 +15,30 @@ print("YUI")
    
 
 class Output:
+    """
+    Interfacing to UI output devices
+    
+    Attributes:
+    ----------
+    pins: 'tuple'
+        board pin or pins to connect to
+        
+    Methods:
+    --------
+        connect: establish the connection
+        write: update the signal (brightness, frequency, etc)
+    """
     pins = {}
     def __init__(self, pins = None):
         if not pins is None:
             self.pins = pins
     
     def connect(self):
+        """Establishes the connection."""
         return True
     
     def write():
+        """updates the display"""
         pass
 
 class LED(Output):
@@ -37,15 +52,41 @@ class LED(Output):
         self.led.value = value
         
     def on(self):
+        """Switches on."""
         self.write(True)
         
     def off(self):
+        """Switches off."""
         self.write(False)
         
-    def Onoff(self):
+    def toggle(self):
+        """Toggles."""
         self.led.value = not self.led.value
 
 class RGB(Output):
+    """
+    Provides an RGB Led interface.
+    
+    Attributes:
+    -----------
+    pins: (int) default is GP28.
+    
+    Methods:
+    --------
+    
+    connect: establish connection with RGB
+    write: send 
+    red: red
+    dred: dim red
+    yellow:
+    orange:
+    green:
+    blue:
+    white:
+    on: switches on
+    off: switches off
+    """
+    
     pins = board.GP28
     
     def __init__(self, pins = None):
@@ -57,6 +98,7 @@ class RGB(Output):
         self.led.direction = digitalio.Direction.OUTPUT
 
     def write(self, color):
+        """Updates color as GRB"""
         neopixel_write(self.led, color)
         
     def red(self):    self.write(bytearray([0, 10, 0]))
@@ -82,8 +124,14 @@ class Input:
     """
     Generic input objects
     
-    Observes an input source in a given sampling frequency 
-    and announces an update when the value changes.
+    Input objects samples from an input source at a given frequency 
+    and announces an event when the value changes.
+    
+    Attributes
+    ----------
+    pins: pin or pins to connect to
+    sample_interval: sample interval
+    
     """
 
 
@@ -92,6 +140,11 @@ class Input:
     sample_interval = 0.05
     
     def __init__(self, pins = None, sample_interval = None):
+        """
+        Creates an input object.
+        
+        P
+        """
         if pins is not None:
             self.pins = pins
         if sample_interval is not None:
@@ -131,7 +184,7 @@ class Input:
 
 
 
-class Buzzer(Input):
+class Button(Input):
     """
     Observes a digital pin or button
     
@@ -150,19 +203,19 @@ class Buzzer(Input):
         return not self.sensor.value
     
     def demo():
-        buzz = Buzzer()
+        buzz = Button()
         if buzz.connect():
             while True:
                 if buzz.update():
                     print(buzz.value)
 
 
-class ButtonPress(Buzzer):
+class ButtonPress(Button):
     """
     Observes a button for button presses
 
     This class implements an event announcement mechanism,
-    which fires only on when the button closes.
+    which fires only on when the button is pressed.
     """
     def update_event(self):
         if self.value: # on press
@@ -174,9 +227,9 @@ class ButtonPress(Buzzer):
 
 
 
-class Shortlong(Buzzer):
+class Shortlong(Button):
     """
-    Observes a button for varying length button presses
+    Observes a button for short and long button presses
 
     This class implements an update event mechanism, where 
     events are classified as short or long button releases.
@@ -214,12 +267,13 @@ class Shortlong(Buzzer):
                         STATE = "Stop"
                     print(Btn.event + " --> " + STATE)
 
-Button = Shortlong
 
-
-class Onoff(Buzzer):
+class Onoff(Button):
+    """
+    A button that toggles between two states
+    """
     def connect(self):
-        if Buzzer.connect(self):    
+        if Button.connect(self):    
             self.state = False # <---
             return True
         else:
