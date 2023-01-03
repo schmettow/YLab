@@ -5,28 +5,31 @@ YLab: Buzzwire task with one buzz contact and one base station contact, plus Yem
 import board
 import time
 
-from sensory import Sensory, Contact, MOI, Yxz_3D, Yema
+from sensory import Sensory, ContactEvent, MOI, Yxz_3D, Yema, DHT11
 from yui import Shortlong, RGB, Buzz
 from ydata import SDcard
 
+def make_filename():
+    return "ylab_buzzwire" + str(time.time()) + ".csv"
+
 def main():
-    wire = Contact(ID = "buzz",
+    wire = ContactEvent(ID = "buzz",
                    pins = board.GP0,
                    sample_interval = 1/100)   ## Grove 1
-    station = Contact(ID = "station", pins = board.GP1) ## Grove 1
+    station = ContactEvent(ID = "station", pins = board.GP1) ## Grove 1
     sensory = Sensory( [wire,
                         station,
                         MOI(pins = board.GP21, ID = "start"),
                         MOI(pins = board.GP22, ID = "stop"),
+                        DHT11(),
                         Yema(sample_interval = 0.1),
                         Yxz_3D(sample_interval = 0.1)] )
     sensory.connect()
     
     SDcard.init()
     drive = SDcard(sensory,
-                   filename = "ylab_buzzwire" + str(time.time()) + ".csv")
+                   filename = make_filename())
     drive.save_interval = 5
-    drive.connect()
     
     btn = Shortlong()
     btn.connect()
@@ -47,10 +50,12 @@ def main():
         ################ Interactive transitionals #############
         if btn.update():
             if btn.update_event():
+                # short press
                 if btn.event == "short":
                     ## Init --> Pause
                     if State == "Init":
                         rgb.green()
+                        drive.connect()
                         State = "Pause"
                     ## Record --> Pause
                     elif State == "Record":
@@ -64,20 +69,25 @@ def main():
                     elif State == "Stop":
                         rgb.red()
                         sensory.reset_data()
-                        drive.filename = "ylab1_" + str(time.time()) + ".csv"
+                        drive.filename = make_filename()
+                        drive.connect()
                         State = "Record"
-                    ## --> STOP
+                # long press
                 elif btn.event == "long":
-                    if State == "Stop":
+                    ## --> STOP
+                    if not State == "Stop":
                         drive.disconnect()
-                        rgb.off()
-                        State = "End"
-                        print("YLab0 says bye.")
-                        break
-                    else:
                         rgb.white()
                         buzzer.off()
                         State = "Stop"
+                    ## --> END
+                    else:
+                        SDcard.final()
+                        rgb.off()
+                        State = "End"
+                        print("Buzzwire says bye.")
+                        break
+                        
                 
                 # print(State)
             
