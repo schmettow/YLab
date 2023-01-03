@@ -327,6 +327,7 @@ class Yxz_3D(Sensor):
         accel = [value / self.HAL.STANDARD_GRAVITY for value in self.sensor.acceleration]
         return accel
     
+
     def result(self):
         return [[self.time, self.time, self.time],
                 [self.ID + axis for axis in ("x","y","z")],
@@ -403,7 +404,27 @@ class Contact(Sensor_binary):
     import digitalio
     inverted = True
     pull = digitalio.Pull.UP
+    
 
+class ContactEvent(Contact):
+    last_value = value = None
+    def sample(self, interval = None):
+        """
+        Updates only if interval has passed AND the state has changed
+        """
+        if interval is not None:
+            self.sample_interval = interval
+        
+        now = this_moment()
+        if (now - self.time) >= self.sample_interval:
+            self.last_value = self.value
+            self.value = self.read()
+            self.time = now
+            if not self.last_value == self.value:
+                return True
+        return False
+
+    
 
 class MOI(Sensor_binary):
     """
