@@ -12,8 +12,6 @@ from neopixel_write import neopixel_write
 
 print("YUI")
 
-   
-
 class Output:
     """
     Interfacing to UI output devices
@@ -118,6 +116,73 @@ class RGB(Output):
     def on(self):     self.white()
     
     def off(self):    self.write(bytearray([0, 0, 0]))
+
+
+class Buzz(Output):
+    """
+    Plays a single tone
+    
+    Attributes:
+    -----------
+    pins: (int) default is GP18.
+    
+    Methods:
+    --------
+    
+    connect: establish connection with Buzzer 
+    on: switches the Buzzer on 
+    off: switches the Buzzer off
+    write: sets frequency of Buzzer
+    """
+    from pwmio import PWMOut
+    # from ytones import tones
+    pins = board.GP18
+
+    def __init__(self, pins = None):
+        if not pins is None:
+            self.pins = pins
+
+    def connect(self):
+        self.buzzer = self.PWMOut(self.pins, variable_frequency=True)
+
+    def on(self):
+        self.buzzer.duty_cycle = 19660
+    
+    def off(self):
+        self.buzzer.duty_cycle = 0
+
+    def switch(self, value):
+        if value:
+            self.on()
+        else:
+            self.off()
+
+    def frequency(self, frequency):
+        self.buzzer.frequency = frequency
+
+
+class ContinuousOutput(Output):
+    def update(self):
+        pass
+
+class Tone(Buzz, ContinuousOutput):
+    """
+    play_note : plays note for a certain amount of time defined by note_duration
+    play_melody : plays notes in a melody
+    """
+    
+    def play_note(self, note, note_duration=1):
+        self.write(tones[note])
+        self.on()
+        time.sleep(note_duration)
+        self.off()
+    
+    def play_melody(self, up, note_duration=1):
+        for note in up:
+            self.play_note(note, note_duration)
+
+
+
 
 
 class Input:
