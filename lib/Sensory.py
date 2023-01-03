@@ -327,35 +327,47 @@ class Yxz_3D(Sensor):
         accel = [value / self.HAL.STANDARD_GRAVITY for value in self.sensor.acceleration]
         return accel
     
-    def sample(self, interval = None):
-        """
-        Updates the sensor readings in regular intervals
-        
-        For this it needs to be in a fast while loop
-        
-        :param interval float: overrides update interval of object
-        :param frequency float: overrides interval as reads/s
-        :return: tuple (update, value), with the last value if no update has occured.
-        """
-
-        ## Catching the method arguments
-        if interval is not None:
-            self.sample_interval = interval
-        
-        now = this_moment()
-        if (now - self.time) >= self.sample_interval:
-            self.time = now
-            self.value = self.read()
-            return True
-        else:
-            return False
-
     def result(self):
         return [[self.time, self.time, self.time],
                 [self.ID + axis for axis in ("x","y","z")],
                 self.value]
 
 
+class DHT11(Sensor):
+    """
+    DHT11 environmental sensor
+    
+    Records air tempereture and humidity. This sensor uses one digital pin to connect.
+    Default is GPIO3 (Grove port 2 on Maker Pi)
+    """
+    
+    from adafruit_dht import DHT11 as DHT ## hardware abstraction layer
+    pins = board.GP3
+    update_interval = 1
+    
+    def connect(self):
+        """
+        Connects to a DHT11 sensor for temp and humid
+        
+        :return: success  or fail
+        :rtype: Boolean
+        """
+
+        self.sensor = self.DHT(self.pins)
+        return Sensor.connect(self) ## base class, performs first read
+
+    def read(self):
+        out = (self.sensor.temperature, self.sensor.humidity)
+        return out
+    
+
+    def result(self):
+        return [[self.time, self.time],
+                [self.ID + "_temp", self.ID + "_humid"],
+                self.value]
+    
+    
+    
 
 
 class Sensor_binary(Sensor):
