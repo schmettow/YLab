@@ -237,6 +237,7 @@ class Sensor_analog(Sensor):
         return 1/value
 
 
+
 class ADS():
     pins = {"SCL": board.GP7,
             "SDA": board.GP6}
@@ -303,6 +304,7 @@ class Sensor_ads(Sensor_analog):
 
 
 class Yxz_3D(Sensor):
+    import adafruit_lis3dh as HAL ## hardware abstraction layer
     pins = {"SCL": board.GP7,
             "SDA": board.GP6}
     i2c_addr = 0x19
@@ -314,7 +316,6 @@ class Yxz_3D(Sensor):
         :return: success  or fail
         :rtype: Boolean
         """
-        import adafruit_lis3dh as HAL ## hardware abstraction layer
 
         self.i2c = busio.I2C(board.GP7, board.GP6)
         self.sensor = self.HAL.LIS3DH_I2C(self.i2c,
@@ -358,27 +359,41 @@ class Yxz_3D(Sensor):
 
 
 class Sensor_binary(Sensor):
+    import digitalio
     pins = board.GP22  ## default button GP22 (corner)
     bit_width = 1
-    inverted = True
+    inverted = False
+    pull = digitalio.Pull.DOWN
     
     def connect(self):
-        import digitalio
         """
         Connects to the sensor port
         """
-        self.sensor = digitalio.DigitalIn(self.pins)
-        self.sensor.switch_to_input(pull=digitalio.Pull.DOWN)
+        self.sensor = self.digitalio.DigitalInOut(self.pins)
+        self.sensor.switch_to_input(pull = self.pull)
         return Sensor.connect(self)
 
     def read(self):
         value = self.sensor.value
         if self.inverted: value = not bool(value)
+        # value = int(value)
         return value
 
 
+class Contact(Sensor_binary):
+    """
+    Contact sensor
 
-class MOI(Sensor):
+    The contact sensor puts a wire connected to the digital pin under voltage (pull up).
+    The second wire is connected to GND. The sensor reports True, when the wires
+    get into contact, .i.e. currence is flowing from pin to ground.
+    """
+    import digitalio
+    inverted = True
+    pull = digitalio.Pull.UP
+
+
+class MOI(Sensor_binary):
     """
     Basic moments-of-interest sampler
     
@@ -386,6 +401,7 @@ class MOI(Sensor):
     which only fires, if a defined event has been detected.
     Defaults to button GP22
     """
+    inverted = True
     sample_interval = 0.01
     pins = board.GP22
     on_on = True
