@@ -2,6 +2,7 @@ import os
 import board
 import time
 import sdcardio
+#import sdioio
 import storage
 import busio
 
@@ -96,15 +97,20 @@ class Ydata:
 
 class SDcard(Ydata):
     pins = {"cs":board.GP15,
-            "spi": board.GP10, "mosi": board.GP11, "miso":board.GP12}
+            "spi": board.GP10, "mosi": board.GP11, "miso":board.GP12},
+    baudrate = 1E6
     update_interval = 1
-    filename = "Ylab.csv"
+    mount_point = "/sd"
+    filename = "ylab.csv"
     
     @classmethod
-    def init(cls):
+    def init(cls, baudrate = None):
+        if not baudrate is None:
+            cls.baudrate = baudrate
         cls.spi = busio.SPI(board.GP10, MOSI=board.GP11, MISO=board.GP12)
         cls.cs = board.GP15
-        cls.sd = sdcardio.SDCard(cls.spi, cls.cs)
+        cls.sd = sdcardio.SDCard(cls.spi, cls.cs,
+                                 baudrate = int(cls.baudrate))
         cls.vfs = storage.VfsFat(cls.sd)
         return True
     
@@ -125,6 +131,7 @@ class SDcard(Ydata):
        
     def connect(self, mount_point = "/sd"):
         self.mount_point = mount_point
+        self.filename = None
         try:
             storage.mount(SDcard.vfs, self.mount_point)
         except:
@@ -132,31 +139,68 @@ class SDcard(Ydata):
             return(False)
         return(True)
 
+    def create_file(self, filename = None):
+        if not filename is None: self.filename = filename
+        self.path = self.mount_point + "/" + self.filename
+        
+        try:
+            with open(self.path, "w") as file:
+                file.write("time,ID,value\n")
+        except:
+            return False
+        return True
+                
     def disconnect(self):
         try: # this makes sure they all run through
             storage.umount(self.vfs) 
         except:
-            print("umount failed")
+            return False
         return True # <-- quick fix
 
     def write(self):
-        written_rows = 0
-        path = self.mount_point + "/" + self.filename
-        if self.last_saved is None:
-             mode = "w"
-             with open(path, mode) as file:
-                 file.write("time,ID,value\n")
-        else:
-             mode = "a"
-             data = self.sensor.data
-             n_data = self.sensor.n_obs()
-             with open(path, mode) as file:
-                 for row in range(0, n_data):
-                     written_rows += 1
-                     file.write(str(data[0][row]) + "," +
-                                str(data[1][row]) +"," +
-                                str(data[2][row]) + "\n")
-        # storage.umount(self.vfs)
-        return written_rows
+        data = self.sensor.data
+        n_data = self.sensor.n_obs()
+        csv_out = ""
+        for row in range(0, n_data):
+            csv_out = csv_out + ",".join([	str(data[0][row]),
+                                            str(data[1][row]),
+                                            str(data[2][row])]) + "\n"
+        
+        with open(self.path, "a") as file:
+            file.write(csv_out)
+        return n_data
 
+    def write_(self):
+        written_rows = 0
+        path = self.path
+        mode = "a"
+        data = self.sensor.data
+        n_data = self.sensor.n_obs()
+        with open(path, mode) as file:
+            for row in range(0, n_data):
+                written_rows += 1
+                file.write(str(data[0][row]) + "," +
+                           str(data[1][row]) +"," +
+                           str(data[2][row]) + "\n")
+        return written_rows
+       
+       
+       
+class BSU(Ydata):
+    """
+    Burst Save over USB
+    
+    sends csv packages up the serial line
+    """
+    def write(self):
+        written_rows = 0
+        data = self.sensor.data
+        n_data = self.sensor.n_obs()
+        for row in range(0, n_data):
+            written_rows += 1
+            print(  ",".join(  [str(data[0][row]), ## needs to be expanded
+                                str(data[1][row]),
+                                str(data[2][row])]))
+        return written_rows
+    
     
