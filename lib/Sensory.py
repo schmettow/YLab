@@ -105,7 +105,7 @@ class Sensor:
         result = self.result()
         n_result = len(result[0])
         for col in range(0, len(result)):
-            self.data[col].append(result[col][0])  ## <<- bad fix
+            self.data[col].extend(result[col])  ## <<- bad fix
         return n_result
     
     ## just for backward compatibility
@@ -197,9 +197,10 @@ class Sensory(Sensor):
         new_sample = 0
         for sensor in self.sensors:
             if sensor.sample():
-                self.ID.append(sensor.ID)
-                self.time.append(sensor.time)
-                self.value.append(sensor.value)
+                result = sensor.result()
+                self.ID.extend(result[0])
+                self.time.extend(result[1])
+                self.value.extend(result[2])
                 new_sample += 1
         return new_sample
     
@@ -329,7 +330,7 @@ class Yxz_3D(Sensor):
     
 
     def result(self):
-        return [[self.time, self.time, self.time],
+        return [[self.time] * 3,
                 [self.ID + axis for axis in ("x","y","z")],
                 self.value]
 
@@ -363,9 +364,9 @@ class DHT11(Sensor):
     
 
     def result(self):
-        return [[self.time, self.time],
+        return [[self.time] * 2,
                 [self.ID + "_temp", self.ID + "_humid"],
-                self.value]
+                [self.value[0], self.value[1]]]
     
     
     
