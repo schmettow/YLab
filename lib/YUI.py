@@ -109,7 +109,7 @@ class RGB(Output):
     
     def green(self):  self.write(bytearray([5, 0, 0]))
     
-    def blue(self):   self.write(bytearray([0, 0, 3]))
+    def blue(self):   self.write(bytearray([0, 0, 10]))
     
     def white(self):  self.write(bytearray([10, 10, 10]))
     
@@ -172,17 +172,10 @@ class Tone(Buzz, ContinuousOutput):
     """
     
     def play_note(self, note, note_duration=1):
-        self.write(tones[note])
-        self.on()
-        time.sleep(note_duration)
-        self.off()
+        pass
     
     def play_melody(self, up, note_duration=1):
-        for note in up:
-            self.play_note(note, note_duration)
-
-
-
+        pass
 
 
 class Input:
