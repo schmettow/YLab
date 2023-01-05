@@ -11,10 +11,39 @@ YLab is based on a Raspberry Pico (not Pi), that sits on a Maker Pi board with a
 
 ## Supported devices
 
+In theory, all hardware supported by Circuitpython by Adafruit is capable of running YLab
+
+### Boards
+
 + Cytron Maker Pi Pico
+
+### Sensors
+
+The package Sensory provides a consistent interface for sampling data from sensors. 
+Currently, the following sensors are implemented.
+
 + all analog sensors (GSR, EMG, EEG)
 + ADS1115 via I2C (provides four analog inputs)
 + LIS3DHTR 3 dof acceleration sensor
 + DHT11 atmospheric temperature and humidity sensor
 + moment of interest coding via button presses
 + contact sensors, e.g. for implementing the buzz wire game
+
+### User interface
+
+The YUI package provides UI elements to creeate the user interface.
+Currently the following devices are supported:
+
++ buttons, with various events, such as press or long press
++ RGB Led
++ Led
++ Buzzer
+
+### Storage
+
+The package Ydata provides various data storage mechanisms. 
+Currently the following two are implemented:
+
++ writing CSV to an SDcard
++ writing CSV up the usb line
+
