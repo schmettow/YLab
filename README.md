@@ -1,4 +1,7 @@
-# YLab is your Lab
+
+
+
+# ![YLab](https://github.com/schmettow/YLab/blob/main/logo/YLab%20Logo%20small.png?raw=true) is your Lab
 
 [Getting started with YLab](https://schmettow.github.io/YLab/)
 
