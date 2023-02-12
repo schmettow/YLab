@@ -29,7 +29,7 @@ class Ydata:
         return True
     
     def write(self, result):
-        return True
+        return 0
  
     def __init__(self, sensor, filename = None, save_interval = None, led = None):
         self.last_saved = None
@@ -46,15 +46,15 @@ class Ydata:
         now = this_moment()
         first_save = self.last_saved is None
         if first_save or (now - self.last_saved) >= self.save_interval:
-            self.move()
+            n_obs = self.move()
             self.last_saved = now
-            return True
-        return False
+            return n_obs
+        return 0
     
     def move(self):
-        self.write()
-        self.sensor.reset_data()
-        return True
+        n_obs = self.write()
+        self.sensor.clear_buffer()
+        return n_obs
     
     @classmethod
     def demo_0(cls):
@@ -155,37 +155,76 @@ class SDcard(Ydata):
             storage.umount(self.vfs) 
         except:
             return False
-        return True # <-- quick fix
+        return True
 
     def write(self):
-        data = self.sensor.data
-        n_data = self.sensor.n_obs()
+        buffer = self.sensor.data
+        n_buffer = self.sensor.n_obs()
         csv_out = ""
-        for row in range(0, n_data):
-            csv_out = csv_out + ",".join([	str(data[0][row]),
-                                            str(data[1][row]),
-                                            str(data[2][row])]) + "\n"
+        for row in range(0, n_buffer):
+            csv_out = csv_out + ",".join([	str(buffer[0][row]),
+                                            str(buffer[1][row]),
+                                            str(buffer[2][row])]) + "\n"
         
         with open(self.path, "a") as file:
             file.write(csv_out)
-        return n_data
+        return n_buffer
 
-    def write_(self):
-        written_rows = 0
-        path = self.path
-        mode = "a"
-        data = self.sensor.data
-        n_data = self.sensor.n_obs()
-        with open(path, mode) as file:
-            for row in range(0, n_data):
-                written_rows += 1
-                file.write(str(data[0][row]) + "," +
-                           str(data[1][row]) +"," +
-                           str(data[2][row]) + "\n")
-        return written_rows
        
-       
-       
+class Ydt(SDcard):
+    """
+    Saves data in binary to sd card.
+    
+    This is about four times faster than writing CSV.
+    The disadvantage is that data needs to be unpacked
+    before it can be worked with.
+    """
+    from struct import pack, unpack
+    ydt_format = "@fif"
+
+    def pack_row(row):
+        return Ydt.pack(Ydt.ydt_format, row[0], row[1], row[2])
+
+    def unpack_row(row):
+        return Ydt.unpack(Ydt.ydt_format, row)
+    
+    def pack_ydt(buffer):
+        out = bytearray()
+        for row in range(0, len(buffer[0])):
+            this_row = (buffer[0][row],
+                        buffer[1][row],
+                        buffer[2][row]) 
+            out.extend(Ydt.pack_row(this_row))
+        return out
+
+    def create_file(self, filename = None):
+        if not filename is None: self.filename = filename
+        self.path = self.mount_point + "/" + self.filename
+        
+        try:
+            with open(self.path, "wb") as file:
+                pass
+        except:
+            return False
+        return True
+
+    def write(self):
+        pdata = Ydt.pack_ydt(self.sensor.data)
+        with open(self.path, "ab") as file:
+            file.write(pdata)
+        return self.sensor.n_obs()
+
+    def load_ydt(path):
+        out = []
+        with open(path, "rb") as file:
+            pdata = file.read()
+        pdata = Ydt.unpack(Ydt.ydt_format, pdata)
+        for row in pdata:
+            out.append(row)
+        return out
+
+
+
 class BSU(Ydata):
     """
     Burst Save over USB
