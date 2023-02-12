@@ -152,7 +152,7 @@ class Buzz(Output):
         self.buzzer.duty_cycle = 0
 
     def switch(self, value):
-        if value:
+        if value[0]:
             self.on()
         else:
             self.off()

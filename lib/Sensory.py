@@ -10,6 +10,7 @@ class Sensor:
     provides a unified interface for sampling from sensors
     """
     n_instances = int(0)
+    n_probes = 1 # when one sensor has many probes, adjust this
     sample_interval = 1.0/4
     pins = None
     
@@ -27,20 +28,24 @@ class Sensor:
         :rtype: NoneType
 
         """
+        
         self.channel = channel
         if not pins is None:
             self.pins = pins
         if not sample_interval is None:
             self.sample_interval = sample_interval
-        self.sensor_class = self.__class__.__name__
-        self.ID = self.sensor_class + str(self.__class__.n_instances)
         
+        self.classID = self.__class__.__name__
+        self.ID = self.classID + str(self.__class__.n_instances)
+        self.numID = Sensor.n_instances
+        self.__class__.n_instances += 1 ## auto-counting multiple Sensors of same class
+        Sensor.n_instances += __class__.n_probes  ## auto-counting multiple Sensors overall
+
         
         self.time = this_moment()
         self.value = float()
         self.reset_data()
         self.last_saved = None
-        self.__class__.n_instances += 1      ## auto-counting multiple Sensors
     
     def connect(self):
         try:
@@ -52,7 +57,8 @@ class Sensor:
             return False
     
     def read(self):
-        return self.time % 42
+        self.value = (self.time % 42)
+        return (float(self.value),)
 
     def sample(self, interval = None):
         """
@@ -62,7 +68,7 @@ class Sensor:
         
         :param interval float: overrides update interval of object
         :param frequency float: overrides interval as reads/s
-        :return: tuple (update, value), with the last value if no update has occured.
+        :return: True if update has occured
         """
 
         ## Catching the method arguments
@@ -77,7 +83,7 @@ class Sensor:
         else:
             return False
 
-    def result(self):
+    def result_(self):
         """
         Presents the current reading as YLab standard measure (time, ID, value)
 
@@ -90,6 +96,12 @@ class Sensor:
         else:
             out = [[self.time], [self.ID], [self.value]]
         return out
+    
+    def result(self):
+        return [[self.time] * self.n_probes,
+                [int(self.numID * 10 + probe) for probe in range(0,self.n_probes)],
+                self.value]
+
 
     def clear_buffer(self):
         """
@@ -105,7 +117,7 @@ class Sensor:
         result = self.result()
         n_result = len(result[0])
         for col in range(0, len(result)):
-            self.data[col].extend(result[col])  ## <<- bad fix
+            self.data[col].extend(result[col])
         return n_result
     
     ## just for backward compatibility
@@ -125,8 +137,10 @@ class Sensor:
         """
         Print the present measure for use with Thonny plotter
         """
-        out = self.ID +":"+ str(self.value)
+        out = str(self.ID) +":"+ str(self.value)
         print(out)
+        
+
 
     @classmethod
     def demo_0(cls):
@@ -165,9 +179,12 @@ class Sensor:
 
 class Sensory(Sensor):
     """
-    Unifying multiple sensors in a sensor array
+    Unifying multiple sensors in a sensor array.
 
     :param list of sensor objects
+    
+    Note that this behaves just like real sensors, except there are no
+    low-level methods, like read() and result().
     """
 
     def __init__(self, sensor_array):
@@ -187,20 +204,25 @@ class Sensory(Sensor):
                 success = False
         return success
         
+        
+    def result(self):
+        """
+        return the present results for all sensors in the array
+        """
+        return [self.ID, self.time, self.value]
+                
+    
     def sample(self):
         """
         sample all sensors in the array
         """
-        self.ID = []
-        self.time = []
-        self.value = []
         new_sample = 0
         for sensor in self.sensors:
             if sensor.sample():
                 result = sensor.result()
-                self.ID.extend(result[0])
-                self.time.extend(result[1])
-                self.value.extend(result[2])
+                self.ID = result[0]
+                self.time = result[1]
+                self.value = result[2]
                 new_sample += 1
         return new_sample
     
@@ -211,12 +233,12 @@ class Sensory(Sensor):
         """
         out_string = ""
         for sensor in self.sensors:
-            out_string = out_string + sensor.ID + ":" + str(sensor.value) + " "
+            out_string = out_string + str(sensor.ID) + ":" + str(sensor.value) + " "
         print(out_string)
         return True
     
-    
-
+    def read():
+        pass
 
 class Sensor_analog(Sensor):
     pins = board.GP27  ## default is Grove 6
@@ -229,17 +251,20 @@ class Sensor_analog(Sensor):
         return Sensor.connect(self)
 
     def read(self):
-        raw_value = self.sensor.value
-        if not raw_value == 0:
-            value = 2**self.bit_width / raw_value
-        else:
-            value = 2**self.bit_width
-        if self.reciprocal: value = 1/value
-        return 1/value
+        value = self.sensor.value
+        if not value == 0:
+            value = value/(2**self.bit_width)
+            if self.reciprocal: value = 1/value
+        return (float(value),)
 
 
 
 class ADS():
+    """
+    Connects a ADS1115 on I2C bus
+    
+    default Grove 4
+    """
     pins = {"SCL": board.GP7,
             "SDA": board.GP6}
     bit_width = 15
@@ -248,6 +273,7 @@ class ADS():
     init = False
     data_rate = 860
     mode = 0
+    n_probes = 1 ## until we implement multi-channel
     # channels = [ADS.P0, ADS.P1, ADS.P2, ADS.P3]
     
     def __init__(self, gain = 1):
@@ -273,6 +299,9 @@ class ADS():
     
 
 class Sensor_ads(Sensor_analog):
+    """
+    Aanalog sensor in ADS1115
+    """
     def __init__(self,
                  ads,
                  channel = 0,
@@ -309,6 +338,7 @@ class Yxz_3D(Sensor):
     pins = {"SCL": board.GP7,
             "SDA": board.GP6}
     i2c_addr = 0x19
+    n_probes = 3
     
     def connect(self):
         """
@@ -325,15 +355,36 @@ class Yxz_3D(Sensor):
         return Sensor.connect(self) ## base class, performs first read
 
     def read(self):
-        accel = [value / self.HAL.STANDARD_GRAVITY for value in self.sensor.acceleration]
+        accel = (value / self.HAL.STANDARD_GRAVITY for value in self.sensor.acceleration)
         return accel
     
+    
+class Yxz_6D(Sensor):
+    from adafruit_lsm6ds.lsm6ds3 import LSM6DS3 as HAL
+    # hardware abstraction layer
+    n_probes = 6
+    labels = ("xa","ya","za", "xg","yg","zg")
+    pins = {"SCL": board.GP7,
+            "SDA": board.GP6}
+    i2c_addr = 0x6a
+    
+    def connect(self):
+        """
+        Connects to an LSM6DS3 6 DoF sensor
+        
+        :return: success  or fail
+        :rtype: Boolean
+        """
 
-    def result(self):
-        return [[self.time] * 3,
-                [self.ID + axis for axis in ("x","y","z")],
-                self.value]
+        self.i2c = busio.I2C(board.GP7, board.GP6)
+        self.sensor = self.HAL(self.i2c)
+        #self.sensor.range = self.HAL.RANGE_2_G
+        return Sensor.connect(self) ## base class, performs first read
 
+    def read(self):
+        accel = (self.sensor.acceleration)
+        gyro  = (self.sensor.gyro)
+        return accel + gyro  # merging lists
 
 class DHT11(Sensor):
     """
@@ -346,6 +397,7 @@ class DHT11(Sensor):
     from adafruit_dht import DHT11 as DHT ## hardware abstraction layer
     pins = board.GP3
     update_interval = 1
+    n_probes = 2
     
     def connect(self):
         """
@@ -359,14 +411,15 @@ class DHT11(Sensor):
         return Sensor.connect(self) ## base class, performs first read
 
     def read(self):
-        out = (self.sensor.temperature, self.sensor.humidity)
+        out = (float(self.sensor.temperature),
+               float(self.sensor.humidity))
         return out
     
 
-    def result(self):
-        return [[self.time] * 2,
-                [self.ID + "_temp", self.ID + "_humid"],
-                [self.value[0], self.value[1]]]
+#     def result(self):
+#         return [[self.time] * 2,
+#                 [str(self.ID) + "_temp", str(self.ID) + "_humid"],
+#                 [self.value[0], self.value[1]]]
     
     
     
@@ -391,7 +444,7 @@ class Sensor_binary(Sensor):
         value = self.sensor.value
         if self.inverted: value = not bool(value)
         # value = int(value)
-        return value
+        return (float(value),)
 
 
 class Contact(Sensor_binary):
@@ -438,9 +491,8 @@ class MOI(Sensor_binary):
     inverted = True
     sample_interval = 0.01
     pins = board.GP22
-    on_on = True
     event = 0
-    last_state = state = None
+    value = tuple()
     
     
     def sample(self, interval = None):
@@ -452,32 +504,32 @@ class MOI(Sensor_binary):
         
         now = this_moment()
         if (now - self.time) >= self.sample_interval:
-            self.last_state = self.state
-            self.state = self.read()
-            self.time = now
-            if self.state != self.last_state:
-                return self.get_event()
+            last_value = self.value
+            self.value = self.read()
+            if not last_value[0] and self.value[0]: ## new press
+                self.time = now
+                return True
         return False
 
     def connect(self):
         import yui
         if yui.Onoff.connect(self):
-            self.value = 0
+            self.value = self.read()
             return True
         return False
         
     
-    def read(self):
-        return not self.sensor.value
-
-    def get_event(self):
-        if self.state and self.on_on:
-            self.value = 1
-            return True
-        elif not self.state and not self.on_on:
-            self.value = 0
-            return True
-        return False
+#     def read(self):
+#         return (float(not self.sensor.value),)
+# 
+#     def get_event(self):
+#         if self.state and self.on_on:
+#             self.value = 1
+#             return True
+#         elif not self.state and not self.on_on:
+#             self.value = 0
+#             return True
+#         return False
 
 
 
