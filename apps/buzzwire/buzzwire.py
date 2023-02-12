@@ -5,7 +5,7 @@ plus Yema, Yxz and environmental sensors
 Setup:
 
 YEMA:  Grove 6 (analog)
-Yxz:   Grove 4 (I2C)
+YEMA_ads:  Grove 4 (I2C)
 DHT11: Grove 2
 Buzzwire: Grove 1
 
@@ -14,12 +14,12 @@ Buzzwire: Grove 1
 import board
 import time
 
-from sensory import Sensory, ContactEvent, MOI, Yxz_3D, Yema, DHT11
+from sensory import Sensory, ContactEvent, MOI, Yxz_6D, Yema, Yema_ads, ADS, DHT11
 from yui import Shortlong, RGB, Buzz, LED
-from ydata import SDcard, BSU
+from ydata import SDcard, BSU, Ydt
 
 def make_filename():
-    return "ylab_buzzwire" + str(time.time()) + ".csv"
+    return "ylab_buzzwire" + str(time.time()) + ".ydt"
 
 def main():
     wire = ContactEvent(ID = "buzz",
@@ -29,13 +29,20 @@ def main():
                            pins = board.GP1,
                            sample_interval = 1/5) ## Grove 1
     #sensory = DHT11()
+    #ads = ADS()
+    
     sensory = Sensory( [wire,
                         station,
                         MOI(pins = board.GP21),
                         MOI(pins = board.GP22, ID = "stop"),
-                        DHT11(),
+                        #DHT11(),
                         Yema(sample_interval = 1/50),
-                        Yxz_3D(sample_interval = 1/10)])
+#                         Yema_ads(ads = ADS(),
+#                                  sample_interval = 1/50)
+                        ])
+    
+    # sensory = Yema(sample_interval = 1/100)
+    
     sensory.connect()
         
     led = LED()
@@ -62,8 +69,8 @@ def main():
                         rgb.green()
                         sensory.clear_buffer()
                         SDcard.init(baudrate = 3E7)
-                        drive = SDcard(sensory)
-                        drive.save_interval = 5
+                        drive = Ydt(sensory, save_interval = 1)
+                        #drive.save_interval = 0.5
                         drive.connect()
                         drive.create_file(make_filename())
                         State = "Pause"
@@ -98,10 +105,11 @@ def main():
 
         if State == "Record":
             if sensory.sample():
-                sensory.print()
                 sensory.buffer()
                 buzzer.switch(wire.value)
-            drive.update()
+            n_obs = drive.update()
+            if n_obs:
+                print(n_obs)
         elif State == "Pause":
             if sensory.sample():
                 sensory.print()
@@ -110,8 +118,7 @@ def main():
             if sensory.sample():
                 sensory.buffer()
                 buzzer.switch(wire.value)
-            if usb_up.update():
-                sensory.clear_buffer()
+            usb_up.update()
         else:
             pass
 
