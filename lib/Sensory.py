@@ -242,7 +242,7 @@ class Sensory(Sensor):
 
 class Sensor_analog(Sensor):
     pins = board.GP27  ## default is Grove 6
-    bit_width = 11
+    bit_width = 16
     reciprocal = False
     
     def connect(self):
@@ -251,10 +251,10 @@ class Sensor_analog(Sensor):
         return Sensor.connect(self)
 
     def read(self):
-        value = self.sensor.value
-        if not value == 0:
-            value = value/(2**self.bit_width)
-            if self.reciprocal: value = 1/value
+        raw = self.sensor.value
+        value = (raw * 3.3) / (2**self.bit_width)
+        if not value == 0 and self.reciprocal: 
+            value = 1/value
         return (float(value),)
 
 
