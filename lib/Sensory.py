@@ -331,6 +331,10 @@ class Sensor_ads(Sensor_analog):
             self.sensor = AnalogIn(ads, self.channel)
             return Sensor.connect(self) ## base class, performs first read
         return False
+    
+    def read(self):
+        value = self.sensor.voltage
+        return (float(value),)
 
 
 class Yxz_3D(Sensor):
@@ -348,7 +352,7 @@ class Yxz_3D(Sensor):
         :rtype: Boolean
         """
 
-        self.i2c = busio.I2C(board.GP7, board.GP6)
+        self.i2c = busio.I2C(self.pins["SCL"], self.pins["SDA"])
         self.sensor = self.HAL.LIS3DH_I2C(self.i2c,
                                         address = self.i2c_addr)
         self.sensor.range = self.HAL.RANGE_2_G
@@ -376,7 +380,7 @@ class Yxz_6D(Sensor):
         :rtype: Boolean
         """
 
-        self.i2c = busio.I2C(board.GP7, board.GP6)
+        self.i2c = busio.I2C(self.pins["SCL"], self.pins["SDA"])
         self.sensor = self.HAL(self.i2c)
         #self.sensor.range = self.HAL.RANGE_2_G
         return Sensor.connect(self) ## base class, performs first read
@@ -390,7 +394,7 @@ class DHT11(Sensor):
     """
     DHT11 environmental sensor
     
-    Records air tempereture and humidity. This sensor uses one digital pin to connect.
+    Records air temperature and humidity. This sensor uses one digital pin to connect.
     Default is GPIO3 (Grove port 2 on Maker Pi)
     """
     
