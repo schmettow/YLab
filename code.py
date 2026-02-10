@@ -49,12 +49,13 @@ def main():
                     elif STATE == "Stop":
                         yeda.reset_data()
                         STATE = "Active"
-                    ## --> STOP
                 elif btn.event == "long":
+                    ## --> Quick Record
                     if STATE == "Stop":
                         STATE = "Record"
                         print("Next recording")
                     else:
+                        # --> Stop
                         STATE = "Stop"
                         BSU.update()
                 
