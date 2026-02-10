@@ -231,6 +231,11 @@ class BSU(Ydata):
     
     sends csv packages up the serial line
     """
+    
+    def __init__(self, sensor):
+        self.last_saved = None
+        self.sensor = sensor
+    
     def write(self):
         written_rows = 0
         data = self.sensor.data

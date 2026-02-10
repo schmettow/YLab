@@ -14,9 +14,9 @@ Buzzwire: Grove 1
 import board
 import time
 
-from sensory import Sensory, ContactEvent, MOI, Yxz_6D, Yema, Yema_ads, ADS, DHT11
+from sensory import Sensory, ContactEvent, MOI, Yema, Yeda
 from yui import Shortlong, RGB, Buzz, LED
-from ydata import SDcard, BSU, Ydt
+from ydata import BSU
 
 def make_filename():
     return "ylab_buzzwire" + str(time.time()) + ".ydt"
@@ -27,24 +27,17 @@ def main():
                    sample_interval = 1/50)   ## Grove 1
     station = ContactEvent(ID = "station",
                            pins = board.GP1,
-                           sample_interval = 1/5) ## Grove 1
-    #sensory = DHT11()
-    #ads = ADS()
-    
+                           sample_interval = 1/5) ## Grove 1    
     sensory = Sensory( [wire,
                         station,
                         MOI(pins = board.GP21),
                         MOI(pins = board.GP22, ID = "stop"),
-                        #DHT11(),
-                        Yema(sample_interval = 1/50),
-#                         Yema_ads(ads = ADS(),
-#                                  sample_interval = 1/50)
+                        Yeda(sample_interval = 1/10),
+                        Yema(sample_interval = 1/10),
                         ])
     
-    # sensory = Yema(sample_interval = 1/100)
-    
     sensory.connect()
-        
+    usb_up = BSU(sensory)
     led = LED()
     btn = Shortlong()
     rgb = RGB()
@@ -68,11 +61,7 @@ def main():
                     if State == "Stop":
                         rgb.green()
                         sensory.clear_buffer()
-                        SDcard.init(baudrate = 3E7)
-                        drive = Ydt(sensory, save_interval = 1)
-                        #drive.save_interval = 0.5
-                        drive.connect()
-                        drive.create_file(make_filename())
+                    
                         State = "Pause"
                     ## Record --> Pause
                     elif State == "Record":
@@ -86,15 +75,12 @@ def main():
                 elif btn.event == "long":
                     ## --> STOP
                     if State == "Pause" or State == "Record":
-                        drive.disconnect()
-                        SDcard.final()
+                        
                         rgb.white()
                         buzzer.off()
                         State = "Stop"
                     ## <--> Toggle STOP and SEND
                     elif State == "Stop":
-                        usb_up = BSU(sensory)
-                        usb_up.save_interval = 0 ## continuous
                         rgb.blue()
                         State = "Send"
                     elif State == "Send":
@@ -107,22 +93,17 @@ def main():
             if sensory.sample():
                 sensory.buffer()
                 buzzer.switch(wire.value)
-            n_obs = drive.update()
-            if n_obs:
-                print(n_obs)
+                usb_up.update()
+                
         elif State == "Pause":
             if sensory.sample():
-                sensory.print()
+                #sensory.print()
                 buzzer.switch(wire.value)
         elif State == "Send":
             if sensory.sample():
                 sensory.buffer()
                 buzzer.switch(wire.value)
-            usb_up.update()
         else:
             pass
 
 main()
-
-
-

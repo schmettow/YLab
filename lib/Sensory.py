@@ -137,7 +137,7 @@ class Sensor:
         """
         Print the present measure for use with Thonny plotter
         """
-        out = str(self.ID) +":"+ str(self.value)
+        out = str(self.ID) +":"+ str(self.value) + "\n"
         print(out)
         
 
@@ -542,7 +542,7 @@ class MOI(Sensor_binary):
 
 
 class Yeda(Sensor_analog):
-    pins = board.GP27
+    pins = board.GP26
     reciprocal = True
 
 class Yema(Sensor_analog):
