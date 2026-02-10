@@ -41,7 +41,7 @@ class Ydata:
  
     def update(self):
         """
-        Saves sensor data on a storage device
+        Saves or sends sensor data to storage device
         """
         now = this_moment()
         first_save = self.last_saved is None
@@ -52,6 +52,9 @@ class Ydata:
         return 0
     
     def move(self):
+        """
+        Saves or sends data and clears the buffer
+        """
         n_obs = self.write()
         self.sensor.clear_buffer()
         return n_obs
@@ -245,6 +248,7 @@ class BSU(Ydata):
             print(  ",".join(  [str(data[0][row]), ## needs to be expanded
                                 str(data[1][row]),
                                 str(data[2][row])]))
+        #print(written_rows)
         return written_rows
     
     
