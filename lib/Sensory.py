@@ -241,6 +241,11 @@ class Sensory(Sensor):
         pass
 
 class Sensor_analog(Sensor):
+    """
+    Connects an analog sensor
+    
+    default Grove 6
+    """
     pins = board.GP27  ## default is Grove 6
     bit_width = 16
     reciprocal = False
@@ -364,6 +369,11 @@ class Yxz_3D(Sensor):
     
     
 class Yxz_6D(Sensor):
+    """
+    Connects a Lisd6x 6-axis motion sensor to I2C bus
+    
+    default Grove 4
+    """
     from adafruit_lsm6ds.lsm6ds3 import LSM6DS3 as HAL
     # hardware abstraction layer
     n_probes = 6
@@ -389,6 +399,52 @@ class Yxz_6D(Sensor):
         accel = (self.sensor.acceleration)
         gyro  = (self.sensor.gyro)
         return accel + gyro  # merging lists
+    
+class Scd41(Sensor):
+    """
+    SCD41 CO2/Temp/Humidity sensor to the I2C bus
+    
+    default Grove 2
+    """
+    from adafruit_scd4x import SCD4X as HAL
+    
+    pins = {"SCL": board.GP3,
+            "SDA": board.GP2}
+    
+    n_probes = 3
+    labels = ("co2","tmp","hum")
+    
+    def connect(self):
+        """
+        Connects to sensor
+        
+        :return: success  or fail
+        :rtype: Boolean
+        """
+        
+        self.i2c = busio.I2C(self.pins["SCL"], self.pins["SDA"])
+        self.sensor = self.HAL(self.i2c)
+        self.sensor.start_periodic_measurement()
+        return Sensor.connect(self) ## base class, performs first read
+    
+    def sample(self):
+        """
+        Updates the sensor readings in regular intervals
+        
+        For this it needs to be in a fast while loop
+        :return: True if update has occured
+        """
+
+        if self.sensor.data_ready:
+            self.value = self.read()
+            return True
+        else:
+            return False
+
+    def read(self):
+        return [self.sensor.CO2, self.sensor.temperature, self.sensor.relative_humidity]
+        
+
 
 class DHT11(Sensor):
     """
