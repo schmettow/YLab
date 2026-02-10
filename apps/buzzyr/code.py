@@ -4,27 +4,22 @@ plus Yema, Yxz and environmental sensors
 
 Setup:
 
-YEMA:  Grove 6 (analog)
-YEMA_ads:  Grove 4 (I2C)
-DHT11: Grove 2
-Buzzwire: Grove 1
+YEMA, Yeda:  		  Grove 6 (analog)
+Buzzwire, Station:    Grove 1
 
 """
 
 import board
 import time
 
-from sensory import Sensory, ContactEvent, MOI, Yema, Yeda
+from sensory import Sensory, ContactEvent, MOI, Yema, Yeda, Yxz_6D
 from yui import Shortlong, RGB, Buzz, LED
 from ydata import BSU
-
-def make_filename():
-    return "ylab_buzzwire" + str(time.time()) + ".ydt"
 
 def main():
     wire = ContactEvent(ID = "buzz",
                    pins = board.GP0,
-                   sample_interval = 1/50)   ## Grove 1
+                   sample_interval = 1/100)   ## Grove 1
     station = ContactEvent(ID = "station",
                            pins = board.GP1,
                            sample_interval = 1/5) ## Grove 1    
@@ -32,12 +27,13 @@ def main():
                         station,
                         MOI(pins = board.GP21),
                         MOI(pins = board.GP22, ID = "stop"),
-                        Yeda(sample_interval = 1/10),
+                        Yeda(sample_interval = 1/5),
                         Yema(sample_interval = 1/10),
+                        Yxz_6D(sample_interval = 1/10)
                         ])
     
     sensory.connect()
-    usb_up = BSU(sensory)
+    usb = BSU(sensory)
     led = LED()
     btn = Shortlong()
     rgb = RGB()
@@ -57,51 +53,40 @@ def main():
             if btn.update_event():
                 # short press
                 if btn.event == "short":
-                    ## Stop --> Pause
+                    ## Stop --> Active
                     if State == "Stop":
                         rgb.green()
                         sensory.clear_buffer()
-                    
-                        State = "Pause"
-                    ## Record --> Pause
+                        State = "Active"
+                    ## Record --> Active
                     elif State == "Record":
                         rgb.green()
-                        State = "Pause"
-                    ## Pause --> Record
-                    elif State == "Pause":
+                        State = "Active"
+                    ## Active --> Record
+                    elif State == "Active":
                         rgb.red()
                         State = "Record"
                 # long press
                 elif btn.event == "long":
                     ## --> STOP
-                    if State == "Pause" or State == "Record":
-                        
+                    if State == "Active" or State == "Record":
                         rgb.white()
                         buzzer.off()
                         State = "Stop"
-                    ## <--> Toggle STOP and SEND
                     elif State == "Stop":
-                        rgb.blue()
-                        State = "Send"
-                    elif State == "Send":
-                        rgb.white()
-                        State = "Stop"
-
-        ################ Continuous processing #############
+                        State = "Record"
+                    
+        ################ Continuous processing #############q
 
         if State == "Record":
             if sensory.sample():
                 sensory.buffer()
                 buzzer.switch(wire.value)
-                usb_up.update()
+                usb.update()
                 
-        elif State == "Pause":
+        elif State == "Active":
             if sensory.sample():
-                #sensory.print()
-                buzzer.switch(wire.value)
-        elif State == "Send":
-            if sensory.sample():
-                sensory.buffer()
+                sensory.print()
                 buzzer.switch(wire.value)
         else:
             pass
